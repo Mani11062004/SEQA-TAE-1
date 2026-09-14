@@ -353,23 +353,22 @@ async function bulkUpdateReviewItems(req, res) {
     const { reviewId } = req.params;
     const { category, targetStatus, onlyNotReviewed } = req.body;
 
-    let filterSql = `WHERE ri.review_id = $1`;
+    let filterSql = `WHERE review_id = $1`;
     const params = [reviewId, targetStatus || 'pass'];
 
     if (category && category !== 'all') {
       params.push(category);
-      filterSql += ` AND cm.category = $${params.length}`;
+      filterSql += ` AND master_control_id IN (SELECT id FROM checklist_master WHERE category = $${params.length})`;
     }
 
     if (onlyNotReviewed) {
-      filterSql += ` AND ri.status = 'not_reviewed'`;
+      filterSql += ` AND status = 'not_reviewed'`;
     }
 
     await query(`
-      UPDATE review_items ri
+      UPDATE review_items
       SET status = $2, updated_at = CURRENT_TIMESTAMP
-      FROM checklist_master cm
-      ${filterSql} AND ri.master_control_id = cm.id
+      ${filterSql}
     `, params);
 
     // Recalculate

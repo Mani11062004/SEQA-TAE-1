@@ -91,10 +91,25 @@ async function getDatabase() {
       query: (text, params) => pool.query(text, params),
       type: 'pg'
     };
-    console.log('[DB] Using external PostgreSQL connection pool');
+    console.log('[DB] Using PostgreSQL connection pool');
   } else {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(
+        'DATABASE_URL environment variable is required in production. ' +
+        'Please add a PostgreSQL database in Render and set DATABASE_URL in your Web Service Environment settings.'
+      );
+    }
+
+    let sqlite3;
+    try {
+      sqlite3 = require('sqlite3').verbose();
+    } catch (err) {
+      throw new Error(
+        'SQLite3 native module failed to load. In production (e.g. Render Linux), please set the DATABASE_URL environment variable to connect to a PostgreSQL database. Local error: ' + err.message
+      );
+    }
+
     engineType = 'sqlite';
-    const sqlite3 = require('sqlite3').verbose();
     const dataDir = path.resolve(__dirname, '../../data');
     if (!fs.existsSync(dataDir)) {
       fs.mkdirSync(dataDir, { recursive: true });
@@ -508,18 +523,23 @@ async function initDB() {
 
     const masterControls = (await db.query('SELECT * FROM checklist_master ORDER BY id ASC')).rows;
 
+    // Generate standard ISO date strings compatible across both PostgreSQL and SQLite
+    const deadline5Days = new Date(Date.now() + 5 * 86400000).toISOString().split('T')[0];
+    const deadline10Days = new Date(Date.now() + 10 * 86400000).toISOString().split('T')[0];
+
     // Review 1: Completed Review with realistic critical & high findings
     await db.query(
       `INSERT INTO reviews (
         title, project_id, reviewer_id, lead_developer, technologies, deadline,
         status, executive_summary, recommendations
-      ) VALUES ($1, $2, $3, $4, $5, date('now', '+5 days'), 'completed', $6, $7)`,
+      ) VALUES ($1, $2, $3, $4, $5, $6, 'completed', $7, $8)`,
       [
         'Q3 Comprehensive Security Code Audit: FinTech Payment Gateway',
         p1Id,
         reviewerId,
         'Developer',
         'Node.js, Express, PostgreSQL, Stripe API',
+        deadline5Days,
         'Comprehensive security review completed for the core payment processing service. Critical SQL injection vulnerability identified in the audit logs search handler, and insufficient CSRF token validation found on the internal transfer webhook. Authentication and password security mechanisms comply with industry benchmarks.',
         '1. Immediately parameterize the dynamic search query in server/src/controllers/audit.js.\n2. Enforce strict CSRF verification on all state-altering POST routes.\n3. Add restrictive Content-Security-Policy and HSTS headers before production release.'
       ]
@@ -610,13 +630,14 @@ async function initDB() {
       `INSERT INTO reviews (
         title, project_id, reviewer_id, lead_developer, technologies, deadline,
         status, executive_summary, recommendations
-      ) VALUES ($1, $2, $3, $4, $5, date('now', '+10 days'), 'in_progress', $6, $7)`,
+      ) VALUES ($1, $2, $3, $4, $5, $6, 'in_progress', $7, $8)`,
       [
         'Pre-Release HIPAA Security Review: HealthTrack Telehealth',
         p2Id,
         reviewerId,
         'Developer',
         'React, TypeScript, GraphQL, Node.js, AWS S3',
+        deadline10Days,
         'Review in progress focusing on patient record confidentiality (HIPAA), GraphQL query depth limiting, and S3 pre-signed URL expiration.',
         'Pending completion of dependency scans and API authorization matrix.'
       ]
