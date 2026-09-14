@@ -1,0 +1,25 @@
+{
+  "name": "software-security-code-review-checklist",
+  "version": "1.0.0",
+  "description": "Interactive cybersecurity checklist platform for verifying secure code controls, computing compliance scores, and exporting PDF audit reports.",
+  "scripts": {
+    "start": "node server/src/index.js",
+    "dev": "node run.js",
+    "build": "node build.js",
+    "server": "npm start --prefix server",
+    "client": "npm run dev --prefix client"
+  },
+  "keywords": [
+    "appsec",
+    "security-review",
+    "code-review",
+    "owasp",
+    "cwe",
+    "checklist",
+    "react",
+    "express",
+    "cybersecurity"
+  ],
+  "author": "",
+  "license": "ISC"
+}
