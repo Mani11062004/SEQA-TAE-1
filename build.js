@@ -32,13 +32,14 @@ if (!fs.existsSync(serverNodeModules)) {
   console.log('[Build] Server dependencies already installed.');
 }
 
-// 2. Install client dependencies if needed
+// 2. Install client dependencies if needed or if vite is missing
 const clientNodeModules = path.join(__dirname, 'client', 'node_modules');
-if (!fs.existsSync(clientNodeModules)) {
-  console.log('[Build] Installing client dependencies...');
-  run(npmCmd, ['install'], path.join(__dirname, 'client'));
+const viteModule = path.join(clientNodeModules, 'vite');
+if (!fs.existsSync(clientNodeModules) || !fs.existsSync(viteModule)) {
+  console.log('[Build] Installing client dependencies (including Vite)...');
+  run(npmCmd, ['install', '--include=dev'], path.join(__dirname, 'client'));
 } else {
-  console.log('[Build] Client dependencies already installed.');
+  console.log('[Build] Client dependencies and Vite already installed.');
 }
 
 // 3. Build client production bundle
